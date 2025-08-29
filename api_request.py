@@ -4,9 +4,8 @@ import os
 
 load_dotenv()
 api_key = os.getenv("api_key")
-print(api_key)
 
-api_url = f"http://api.weatherstack.com/current?access_key=575f890eb34d3452242406a560ed991d&query=New York"
+api_url = f"http://api.weatherstack.com/current?access_key={api_key}&query=New York"
 def fetch_data():
     print("Fetching data from WeatherStack...")
     try:    
@@ -18,7 +17,7 @@ def fetch_data():
     except requests.exceptions.RequestException as e:
         print(f"Error fetching data from API: {e}")
         raise
-def fech_mock_data():
+def fetch_mock_data():
     print("Fetching mock data...")
     mock_data = {
         "location": {
