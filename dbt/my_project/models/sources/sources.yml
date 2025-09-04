@@ -1,0 +1,20 @@
+version: 2
+
+sources:
+  - name: dev
+    database: db
+    tables:
+      - name: raw_weather_data
+        columns:
+          - name: id
+            tests:
+              - unique
+              - not_null
+          - name: city
+          - name: temperature
+          - name: weather_description
+          - name: time
+
+          - name: humidity
+          - name: wind_speed
+          
