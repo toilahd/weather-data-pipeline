@@ -13,8 +13,8 @@ sources:
           - name: city
           - name: temperature
           - name: weather_description
-          - name: time
-
-          - name: humidity
           - name: wind_speed
+          - name: time
+          - name: inserted_at
+          - name: utc_offset
           

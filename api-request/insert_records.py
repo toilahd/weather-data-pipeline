@@ -14,7 +14,7 @@ def connect_to_db():
         
         # Try Docker environment first (for Airflow)
         db_host = os.getenv("DB_HOST")
-        db_port = os.getenv("DB_PORT)
+        db_port = os.getenv("DB_PORT")
         print(f"Attempting to connect to {db_host}:{db_port}")
         
         conn = psycopg2.connect(

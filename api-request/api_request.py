@@ -56,4 +56,3 @@ def fetch_mock_data():
     }
     return mock_data
         
-print(fetch_data())
