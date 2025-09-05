@@ -8,4 +8,4 @@ This project is a simple ETL pipeline that collects **weather data** from Weathe
 - **PostgreSQL** → Stores raw and transformed weather data.  
 - **DBT** → Cleans & transforms the raw data into analytics tables.  
 - **Airflow** → Orchestrates the pipeline (extract → load → transform).  
-- **Docker Compose** → Runs everything in containers. 
+- **Docker Compose** → Runs everything in containers.   

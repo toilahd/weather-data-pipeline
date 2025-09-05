@@ -18,17 +18,33 @@ services:
     image: apache/airflow:latest
     ports: 
       - 8000:8080
+    env_file:
+      - .env 
     environment:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@db:5432/airflow_db
     volumes:
       - ./airflow/dags:/opt/airflow/dags
+      - ./api-request:/opt/airflow/api-request 
     depends_on:
       - db
     networks:
       - my-network
     command: >
       bash -c "airflow db migrate && airflow standalone"
-
+  dbt:
+    container_name: dbt
+    image: ghcr.io/dbt-labs/dbt-postgres:1.9.latest
+    volumes:
+      - ./dbt/my_project:/usr/app
+      - ./dbt:/root/.dbt
+    working_dir: /usr/app
+    environment:
+      DBT_PROFILES_DIR: "/root/.dbt"
+    depends_on:
+      - db
+    networks:
+      - my-network
+    command: run
 networks:
   my-network:
     driver: bridge
