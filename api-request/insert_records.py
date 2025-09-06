@@ -95,7 +95,7 @@ def insert_records(conn, data):
 def main():
     conn = None  # Initialize conn to avoid UnboundLocalError
     try:
-        data = fetch_mock_data()
+        data = fetch_data()
         conn = connect_to_db()
         create_table(conn)
         insert_records(conn, data)

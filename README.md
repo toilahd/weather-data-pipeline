@@ -1,5 +1,5 @@
 # Weather Data Pipeline project.
-*A hands-on project to practice Postgres, DBT, Airflow and Docker.*
+*A hands-on project to practice Postgres, DBT, Airflow, Superset and Docker.*
 
 ## Overview
 This project is a simple ETL pipeline that collects **weather data** from WeatherStackAPI, stores in **Postgres**, cleans/transforms the data using **DBT**, and schedules the workflow with **Airflow**, all containerized in **Docker**.
