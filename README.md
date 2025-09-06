@@ -24,6 +24,7 @@ All components are containerized and managed via **Docker Compose**.
 ---
 
 ## Project Structure
+```
 
 ├── airflow/ # Airflow dags & configs
 ├── api-request/ # Scripts to fetch weather data from API
@@ -34,7 +35,7 @@ All components are containerized and managed via **Docker Compose**.
 ├── docker-compose.yaml # Orchestration of all services
 └── README.md # Project documentation
 
-
+```
 ---
 
 ## How It Works
