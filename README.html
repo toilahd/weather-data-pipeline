@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Weather Data Pipeline Project</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="weather-data-pipeline-project">Weather Data Pipeline Project</h1>
+<p><em>A hands-on project to practice Postgres, DBT, Airflow, Superset, and Docker.</em></p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>This project implements a modern <strong>ETL pipeline</strong> for weather data.<br>
+It collects <strong>real-time weather data</strong> from the <a href="https://weatherstack.com/">WeatherStack API</a>, loads it into <strong>PostgreSQL</strong>, cleans and transforms the data using <strong>dbt</strong>, orchestrates the workflow with <strong>Airflow</strong>, and visualizes insights with <strong>Apache Superset</strong>.</p>
+<p>All components are containerized and managed via <strong>Docker Compose</strong>.</p>
+<p><img src="file:////home/toilahd/workspace/weather-data-pipeline/docs/pipeline.png" alt="Pipeline Architecture"></p>
+<hr>
+<h2 id="tech-stack">Tech Stack</h2>
+<ul>
+<li><strong>Weatherstack API</strong> → Data source (JSON weather data).</li>
+<li><strong>PostgreSQL</strong> → Stores raw and transformed weather data.</li>
+<li><strong>dbt</strong> → Cleans &amp; transforms raw data into analytics-ready models.</li>
+<li><strong>Apache Airflow</strong> → Orchestrates the pipeline (extract → load → transform).</li>
+<li><strong>Apache Superset</strong> → Business intelligence &amp; visualization.</li>
+<li><strong>Docker Compose</strong> → Container orchestration.</li>
+</ul>
+<hr>
+<h2 id="project-structure">Project Structure</h2>
+<p>├── airflow/ # Airflow dags &amp; configs
+├── api-request/ # Scripts to fetch weather data from API
+├── dbt/ # dbt project (models, sources, transformations)
+├── docker/ # Custom Dockerfiles &amp; init scripts
+├── docs/ # Images
+├── postgres/ # Database initialization scripts
+├── docker-compose.yaml # Orchestration of all services
+└── <a href="http://README.html">README.md</a> # Project documentation</p>
+<hr>
+<h2 id="how-it-works">How It Works</h2>
+<ol>
+<li><strong>Extract</strong> → Python script (<code>api-request/</code>) fetches weather data from the API.</li>
+<li><strong>Load</strong> → Data is ingested into <strong>Postgres (raw_weather_data)</strong>.</li>
+<li><strong>Transform</strong> → <strong>dbt</strong> models clean, de-duplicate, and create analytics tables.</li>
+<li><strong>Orchestrate</strong> → <strong>Airflow DAGs</strong> schedule extract/load/transform tasks.</li>
+<li><strong>Visualize</strong> → <strong>Superset</strong> dashboards for weather trends &amp; insights.</li>
+</ol>
+<hr>
+<h2 id="set-up">Set Up</h2>
+<h3 id="1-clone-the-repo">1. Clone the repo</h3>
+<pre><code class="language-bash">git <span class="hljs-built_in">clone</span> https://github.com/&lt;your-username&gt;/weather-data-pipeline.git
+<span class="hljs-built_in">cd</span> weather-data-pipeline
+</code></pre>
+<h3 id="2-create-a-env-file">2. Create a .env file</h3>
+<pre><code class="language-env"># API
+api_key=YOUR_WEATHERSTACK_API_KEY
+
+# Database
+DB_NAME=db
+DB_USER=db_user
+DB_PASSWORD=db_password
+DB_HOST=db
+DB_PORT=5432
+</code></pre>
+<h3 id="3-start">3. Start</h3>
+<pre><code class="language-bash">docker compose up -d
+</code></pre>
+<h3 id="4-access-the-tools">4. Access the tools</h3>
+<ul>
+<li>Airflow → <a href="http://localhost:8080">http://localhost:8080</a></li>
+<li>Superset → <a href="http://localhost:8088">http://localhost:8088</a></li>
+</ul>
+<h2 id="example-dashboard">Example Dashboard</h2>
+<p><img src="file:////home/toilahd/workspace/weather-data-pipeline/docs/dashboard.jpg" alt="Dashboard"></p>
+
+            
+            
+        </body>
+        </html>

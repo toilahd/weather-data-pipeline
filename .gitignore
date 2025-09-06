@@ -4,3 +4,4 @@ __pycache__/
 postgres/data/
 superset_home/
 redis/
+!docker/.env
