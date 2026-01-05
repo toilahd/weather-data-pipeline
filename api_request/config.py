@@ -76,16 +76,14 @@ class Config:
     # Cities to track (Vietnam)
     # =========================
     CITIES: List[Dict[str, Any]] = [
-        # Miền Bắc
+
         {"name": "Ha Noi", "lat": 21.0285, "lon": 105.8542},
         {"name": "Hai Phong", "lat": 20.8449, "lon": 106.6881},
 
-        # Miền Trung
         {"name": "Da Nang", "lat": 16.0544, "lon": 108.2022},
         {"name": "Hue", "lat": 16.4637, "lon": 107.5909},
         {"name": "Nha Trang", "lat": 12.2388, "lon": 109.1967},
-
-        # Miền Nam
+        
         {"name": "Ho Chi Minh", "lat": 10.8231, "lon": 106.6297},
         {"name": "Can Tho", "lat": 10.0452, "lon": 105.7469},
         {"name": "Vung Tau", "lat": 10.4114, "lon": 107.1362},

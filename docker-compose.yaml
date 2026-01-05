@@ -8,13 +8,14 @@ x-superset-volumes: &superset-volumes
 services:
   db:
     container_name: postgres
-    image: postgres:latest
+    image: postgres:16 
     ports:
       - 5000:5432
     environment:
       POSTGRES_DB: db
       POSTGRES_USER: db_user
       POSTGRES_PASSWORD: db_password
+      PGDATA: /var/lib/postgresql/data/pgdata  # Fix for PostgreSQL 18+ compatibility
     volumes:
       - ./postgres/data:/var/lib/postgresql/data
       - ./postgres/airflow_init.sql:/docker-entrypoint-initdb.d/airflow_init.sql
@@ -30,10 +31,13 @@ services:
       - .env 
     environment:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@db:5432/airflow_db
+      - DB_HOST=db
+      - DB_PORT=5432
     volumes:
       - ./airflow/dags:/opt/airflow/dags
-      - ./api-request:/opt/airflow/api-request 
+      - ./api_request:/opt/airflow/api_request 
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./docker-compose.yaml:/opt/airflow/docker-compose.yaml:ro
     depends_on:
       - db
     networks:

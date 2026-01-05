@@ -1,96 +1,94 @@
 {{
     config(
-        materialized='table',
-        unique_key='id'
+        materialized='table'
     )
 }}
 
-WITH latest_weather AS (
+WITH latest_per_city AS (
     SELECT 
-        city,
-        latitude,
-        longitude,
-        temperature,
-        feels_like,
-        weather_description,
-        windspeed,
-        winddirection,
-        humidity,
-        pressure,
-        cloud_cover,
-        precipitation,
-        is_day,
-        weather_time_local,
-        timezone,
-        inserted_at_utc,
-        
-        -- Get the most recent record for each city
-        ROW_NUMBER() OVER (PARTITION BY city ORDER BY weather_time_local DESC) AS rn
-        
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY city 
+            ORDER BY weather_time DESC
+        ) AS recency_rank
     FROM {{ ref('stg_weather_data') }}
 ),
 
-weather_with_context AS (
+current_weather AS (
     SELECT 
-        *,
-        -- Temperature feels like context
-        CASE 
-            WHEN feels_like IS NOT NULL AND feels_like < temperature - 5 THEN 'Feels colder'
-            WHEN feels_like IS NOT NULL AND feels_like > temperature + 5 THEN 'Feels warmer'
-            ELSE 'Feels about right'
-        END AS feels_like_context,
+        weather_id,
+        city,
+        latitude,
+        longitude,
+        weather_time AS observation_time,
+        timezone,
         
-        -- Wind categorization
+        -- Temperature
+        temperature_c,
+        feels_like_c,
+        temperature_f,
+        feels_like_f,
+        temperature_c - feels_like_c AS temp_feels_diff,
+        
+        -- Atmosphere
+        humidity_pct,
+        pressure_msl,
+        cloud_cover_pct,
+        precipitation_mm,
+        
+        -- Wind
+        wind_speed_kmh,
+        wind_speed_mph,
+        wind_direction_deg,
         CASE 
-            WHEN windspeed < 10 THEN 'Calm'
-            WHEN windspeed < 30 THEN 'Moderate'
-            WHEN windspeed < 60 THEN 'Strong'
+            WHEN wind_direction_deg >= 337.5 OR wind_direction_deg < 22.5 THEN 'N'
+            WHEN wind_direction_deg < 67.5 THEN 'NE'
+            WHEN wind_direction_deg < 112.5 THEN 'E'
+            WHEN wind_direction_deg < 157.5 THEN 'SE'
+            WHEN wind_direction_deg < 202.5 THEN 'S'
+            WHEN wind_direction_deg < 247.5 THEN 'SW'
+            WHEN wind_direction_deg < 292.5 THEN 'W'
+            WHEN wind_direction_deg < 337.5 THEN 'NW'
+        END AS wind_direction_cardinal,
+        
+        -- Weather codes
+        weathercode,
+        weather_description,
+        
+        -- Day/Night
+        CASE WHEN is_day = 1 THEN 'Day' ELSE 'Night' END AS time_of_day,
+        
+        -- Derived metrics
+        CASE 
+            WHEN temperature_c < 10 THEN 'Cold'
+            WHEN temperature_c < 20 THEN 'Cool'
+            WHEN temperature_c < 25 THEN 'Comfortable'
+            WHEN temperature_c < 30 THEN 'Warm'
+            ELSE 'Hot'
+        END AS comfort_level,
+        
+        CASE 
+            WHEN wind_speed_kmh < 5 THEN 'Calm'
+            WHEN wind_speed_kmh < 20 THEN 'Light'
+            WHEN wind_speed_kmh < 40 THEN 'Moderate'
+            WHEN wind_speed_kmh < 60 THEN 'Strong'
             ELSE 'Very Strong'
-        END AS wind_category,
+        END AS wind_strength,
         
-        -- Wind direction text
         CASE 
-            WHEN winddirection >= 337.5 OR winddirection < 22.5 THEN 'N'
-            WHEN winddirection >= 22.5 AND winddirection < 67.5 THEN 'NE'
-            WHEN winddirection >= 67.5 AND winddirection < 112.5 THEN 'E'
-            WHEN winddirection >= 112.5 AND winddirection < 157.5 THEN 'SE'
-            WHEN winddirection >= 157.5 AND winddirection < 202.5 THEN 'S'
-            WHEN winddirection >= 202.5 AND winddirection < 247.5 THEN 'SW'
-            WHEN winddirection >= 247.5 AND winddirection < 292.5 THEN 'W'
-            WHEN winddirection >= 292.5 AND winddirection < 337.5 THEN 'NW'
-            ELSE 'Unknown'
-        END AS wind_dir,
+            WHEN precipitation_mm > 10 THEN 'Heavy Rain'
+            WHEN precipitation_mm > 2 THEN 'Moderate Rain'
+            WHEN precipitation_mm > 0 THEN 'Light Rain'
+            ELSE 'No Rain'
+        END AS rain_status,
         
-        -- Day/Night indicator
-        CASE 
-            WHEN is_day = 1 THEN 'Day'
-            WHEN is_day = 0 THEN 'Night'
-            ELSE 'Unknown'
-        END AS day_night
+        -- Data freshness
+        inserted_at AS data_loaded_at,
+        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - inserted_at))/60 AS minutes_since_load
         
-    FROM latest_weather
-    WHERE rn = 1
+    FROM latest_per_city
+    WHERE recency_rank = 1
 )
 
-SELECT 
-    {{ dbt_utils.generate_surrogate_key(['city', 'weather_time_local']) }} AS id,
-    city,
-    latitude,
-    longitude,
-    temperature,
-    feels_like,
-    feels_like_context,
-    weather_description,
-    windspeed AS wind_speed,
-    winddirection AS wind_degree,
-    wind_dir,
-    wind_category,
-    humidity,
-    pressure,
-    cloud_cover,
-    precipitation,
-    day_night,
-    weather_time_local AS observation_time,
-    timezone,
-    inserted_at_utc AS data_inserted_at
-FROM weather_with_context
+SELECT * FROM current_weather
+ORDER BY city

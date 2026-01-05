@@ -9,6 +9,7 @@ from config import Config
 from exceptions import APIConnectionError, APIResponseError
 from logger_config import setup_logger
 
+
 logger = setup_logger(__name__)
 
 
@@ -66,12 +67,24 @@ class OpenMeteoAPIClient:
     # ------------------------------------------------------------------
 
     def fetch_current_weather(self, city_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Fetch current weather for a city"""
+        """Fetch current weather for a city with comprehensive data"""
         params = self._build_url(
             city_data["lat"],
             city_data["lon"],
             {
-                "current_weather": True
+                "current": [
+                    "temperature_2m",
+                    "relative_humidity_2m",
+                    "apparent_temperature",
+                    "precipitation",
+                    "weather_code",
+                    "cloud_cover",
+                    "pressure_msl",
+                    "wind_speed_10m",
+                    "wind_direction_10m",
+                    "is_day"
+                ],
+                "timezone": "auto"
             }
         )
         logger.info(f"Fetching current weather for {city_data['name']}")

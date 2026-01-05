@@ -64,8 +64,15 @@ class WeatherDatabase:
                     longitude DECIMAL(8,5),
 
                     temperature FLOAT NOT NULL,
+                    feels_like FLOAT,
+                    humidity INTEGER,
+                    pressure FLOAT,
                     windspeed FLOAT NOT NULL,
                     winddirection INTEGER,
+                    cloud_cover INTEGER,
+                    precipitation FLOAT,
+                    is_day INTEGER,
+                    
                     weathercode INTEGER,
                     weather_description TEXT,
 
@@ -112,18 +119,29 @@ class WeatherDatabase:
                 cur.execute("""
                     INSERT INTO dev.raw_weather_data (
                         city, latitude, longitude,
-                        temperature, windspeed, winddirection,
+                        temperature, feels_like, humidity, pressure,
+                        windspeed, winddirection, cloud_cover,
+                        precipitation, is_day,
                         weathercode, weather_description,
                         time, timezone
                     ) VALUES (
                         %(city)s, %(latitude)s, %(longitude)s,
-                        %(temperature)s, %(windspeed)s, %(winddirection)s,
+                        %(temperature)s, %(feels_like)s, %(humidity)s, %(pressure)s,
+                        %(windspeed)s, %(winddirection)s, %(cloud_cover)s,
+                        %(precipitation)s, %(is_day)s,
                         %(weathercode)s, %(weather_description)s,
                         %(time)s, %(timezone)s
                     )
                     ON CONFLICT (city, time) DO UPDATE SET
                         temperature = EXCLUDED.temperature,
+                        feels_like = EXCLUDED.feels_like,
+                        humidity = EXCLUDED.humidity,
+                        pressure = EXCLUDED.pressure,
                         windspeed = EXCLUDED.windspeed,
+                        winddirection = EXCLUDED.winddirection,
+                        cloud_cover = EXCLUDED.cloud_cover,
+                        precipitation = EXCLUDED.precipitation,
+                        is_day = EXCLUDED.is_day,
                         weathercode = EXCLUDED.weathercode,
                         weather_description = EXCLUDED.weather_description,
                         inserted_at = NOW();
@@ -203,5 +221,5 @@ class WeatherDatabase:
             }
 
     def __del__(self):
-        if self.connection_pool:
+        if hasattr(self, 'connection_pool') and self.connection_pool:
             self.connection_pool.closeall()

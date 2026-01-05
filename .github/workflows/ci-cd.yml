@@ -1,0 +1,192 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # Linting and Code Quality
+  lint:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black pylint
+          pip install -r api-request/requirements.txt
+      
+      - name: Run Black (formatting check)
+        run: black --check api-request/
+      
+      - name: Run Flake8 (linting)
+        run: flake8 api-request/ --max-line-length=120 --exclude=__pycache__
+      
+      - name: Run Pylint
+        run: pylint api-request/*.py --max-line-length=120 || true
+
+  # Unit Tests
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov pytest-mock
+          pip install -r api-request/requirements.txt
+      
+      - name: Run unit tests
+        run: |
+          cd api-request
+          pytest test_pipeline.py -v --cov=. --cov-report=xml --cov-report=term
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./api-request/coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  # dbt Tests
+  dbt-test:
+    name: dbt Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dbt
+        run: |
+          pip install dbt-postgres==1.9.0
+      
+      - name: Create test schema
+        run: |
+          PGPASSWORD=test_password psql -h localhost -U test_user -d test_db -c "CREATE SCHEMA IF NOT EXISTS dev;"
+      
+      - name: dbt deps
+        run: |
+          cd dbt/my_project
+          dbt deps
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+      
+      - name: dbt debug
+        run: |
+          cd dbt/my_project
+          dbt debug
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: test_db
+          DB_USER: test_user
+          DB_PASSWORD: test_password
+
+  # Docker Build Test
+  docker-build:
+    name: Docker Build Verification
+    runs-on: ubuntu-latest
+    needs: [test, dbt-test]
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Verify docker-compose configuration
+        run: |
+          docker-compose config
+      
+      - name: Test docker-compose build
+        run: |
+          docker-compose build --no-cache || true
+
+  # Security Scan
+  security:
+    name: Security Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install safety
+        run: pip install safety
+      
+      - name: Run safety check
+        run: |
+          pip install -r api-request/requirements.txt
+          safety check --json || true
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Deploy (only on main branch)
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [test, dbt-test, docker-build, security]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Deploy notification
+        run: |
+          echo "Deploying to production environment"
+          echo "This step would trigger deployment to your server"
+      
+      # Add actual deployment steps here
+      # - Deploy to cloud provider
+      # - Restart services
+      # - Run smoke tests

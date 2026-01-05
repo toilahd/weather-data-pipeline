@@ -29,7 +29,12 @@ class WeatherDataValidator:
 
     @staticmethod
     def validate_coordinates(lat: float, lon: float) -> bool:
-        return -90 <= lat <= 90 and -180 <= lon <= 180
+        try:
+            lat_val = float(lat)
+            lon_val = float(lon)
+            return -90 <= lat_val <= 90 and -180 <= lon_val <= 180
+        except (ValueError, TypeError):
+            return False
 
     # =========================
     # Main validation
@@ -39,11 +44,11 @@ class WeatherDataValidator:
         cls, data: Dict[str, Any]
     ) -> Tuple[bool, List[str]]:
         """
-        Validate Open-Meteo API response
+        Validate Open-Meteo API response with current weather data
 
         Expected:
         - latitude, longitude
-        - current_weather OR daily/hourly blocks
+        - current block with weather variables
         """
         errors: List[str] = []
 
@@ -56,35 +61,43 @@ class WeatherDataValidator:
         elif not cls.validate_coordinates(lat, lon):
             errors.append(f"Invalid coordinates: lat={lat}, lon={lon}")
 
-        # Validate current weather (forecast endpoint)
-        current = data.get("current_weather")
+        # Validate current weather data
+        current = data.get("current")
         if not current:
-            errors.append("Missing current_weather block")
+            errors.append("Missing current block")
         else:
             # Temperature
-            temp = current.get("temperature")
+            temp = current.get("temperature_2m")
             if temp is None:
-                errors.append("Missing temperature")
+                errors.append("Missing temperature_2m")
             elif not isinstance(temp, (int, float)):
                 errors.append("Temperature must be numeric")
             elif not cls.validate_temperature(temp):
                 errors.append(f"Temperature out of range: {temp}")
 
             # Wind speed
-            wind_speed = current.get("windspeed")
+            wind_speed = current.get("wind_speed_10m")
             if wind_speed is None:
-                errors.append("Missing windspeed")
+                errors.append("Missing wind_speed_10m")
             elif not isinstance(wind_speed, (int, float)):
-                errors.append("Windspeed must be numeric")
+                errors.append("Wind speed must be numeric")
             elif not cls.validate_wind_speed(wind_speed):
-                errors.append(f"Windspeed too high: {wind_speed}")
+                errors.append(f"Wind speed too high: {wind_speed}")
+
+            # Humidity
+            humidity = current.get("relative_humidity_2m")
+            if humidity is not None:
+                if not isinstance(humidity, (int, float)):
+                    errors.append("Humidity must be numeric")
+                elif not cls.validate_humidity(humidity):
+                    errors.append(f"Humidity out of range: {humidity}")
 
             # Weather code
-            weather_code = current.get("weathercode")
+            weather_code = current.get("weather_code")
             if weather_code is None:
-                errors.append("Missing weathercode")
+                errors.append("Missing weather_code")
             elif weather_code not in Config.WEATHER_CODES:
-                errors.append(f"Unknown weathercode: {weather_code}")
+                errors.append(f"Unknown weather_code: {weather_code}")
 
             # Time
             time_str = current.get("time")
@@ -115,18 +128,25 @@ class WeatherDataValidator:
         """
         Normalize Open-Meteo data into DB-friendly format
         """
-        current = data.get("current_weather", {})
+        current = data.get("current", {})
+        weather_code = int(current.get("weather_code", -1))
 
         return {
             "city": city_name,
             "latitude": data.get("latitude"),
             "longitude": data.get("longitude"),
-            "temperature": float(current.get("temperature", 0.0)),
-            "windspeed": float(current.get("windspeed", 0.0)),
-            "winddirection": int(current.get("winddirection", 0)),
-            "weathercode": int(current.get("weathercode", -1)),
+            "temperature": float(current.get("temperature_2m", 0.0)),
+            "feels_like": current.get("apparent_temperature"),
+            "humidity": current.get("relative_humidity_2m"),
+            "pressure": current.get("pressure_msl"),
+            "windspeed": float(current.get("wind_speed_10m", 0.0)),
+            "winddirection": int(current.get("wind_direction_10m", 0)),
+            "cloud_cover": current.get("cloud_cover"),
+            "precipitation": current.get("precipitation"),
+            "is_day": current.get("is_day"),
+            "weathercode": weather_code,
             "weather_description": Config.WEATHER_CODES.get(
-                current.get("weathercode"), "Unknown"
+                weather_code, "Unknown"
             ),
             "time": current.get("time"),
             "timezone": data.get("timezone"),

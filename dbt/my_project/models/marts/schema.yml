@@ -1,86 +1,113 @@
 version: 2
 
 models:
-  - name: daily_average
-    description: >
-      Daily aggregated weather statistics by city.
-      Includes temperature trends, wind patterns, and observation counts.
-    columns:
-      - name: city
-        description: City name
-        tests:
-          - not_null
-      
-      - name: date
-        description: Date of observations
-        tests:
-          - not_null
-      
-      - name: avg_temperature
-        description: Average daily temperature in Celsius
-        tests:
-          - not_null
-      
-      - name: min_temperature
-        description: Minimum daily temperature
-      
-      - name: max_temperature
-        description: Maximum daily temperature
-      
-      - name: temp_change
-        description: Temperature change from previous day
-      
-      - name: observation_count
-        description: Number of observations for the day
-        tests:
-          - not_null
-          - dbt_utils.expression_is_true:
-              expression: ">= 1"
-
   - name: weather_report
-    description: >
-      Latest weather conditions for each city with contextual categorizations.
-      This is the current weather snapshot used for dashboards.
+    description: "Latest weather conditions for each city with derived metrics and classifications"
     columns:
-      - name: id
-        description: Surrogate key generated from city and observation time
+      - name: weather_id
+        description: "Surrogate key for unique weather observation"
         tests:
           - unique
           - not_null
-      
       - name: city
-        description: City name
+        description: "City name"
         tests:
           - not_null
-      
-      - name: temperature
-        description: Current temperature in Celsius
+      - name: observation_time
+        description: "Timestamp of weather observation"
         tests:
           - not_null
-      
-      - name: wind_category
-        description: Categorized wind strength
+      - name: temperature_c
+        description: "Temperature in Celsius"
+        tests:
+          - not_null
+      - name: comfort_level
+        description: "Categorical comfort classification (Cold/Cool/Comfortable/Warm/Hot)"
         tests:
           - accepted_values:
-              values: ['Calm', 'Moderate', 'Strong', 'Very Strong']
-      
-      - name: uv_risk
-        description: UV exposure risk level
+              values: ['Cold', 'Cool', 'Comfortable', 'Warm', 'Hot']
+      - name: wind_strength
+        description: "Wind strength category"
         tests:
           - accepted_values:
-              values: ['Unknown', 'Low', 'Moderate', 'High', 'Very High', 'Extreme']
+              values: ['Calm', 'Light', 'Moderate', 'Strong', 'Very Strong']
+      - name: minutes_since_load
+        description: "Data freshness indicator in minutes"
 
-  - name: weather_trends
-    description: >
-      7-day and 30-day weather trends and patterns by city.
-      Used for identifying climate patterns and anomalies.
+  - name: daily_average
+    description: "Daily aggregated weather statistics with 7-day trends and data quality metrics"
+    columns:
+      - name: daily_id
+        description: "Surrogate key for unique city-date combination"
+        tests:
+          - unique
+          - not_null
+      - name: city
+        description: "City name"
+        tests:
+          - not_null
+      - name: date
+        description: "Date of observations"
+        tests:
+          - not_null
+      - name: avg_temp_c
+        description: "Average temperature for the day in Celsius"
+      - name: temp_7day_avg
+        description: "7-day rolling average temperature"
+      - name: data_quality
+        description: "Quality indicator based on observation count (Complete/Good/Fair/Limited)"
+        tests:
+          - accepted_values:
+              values: ['Complete', 'Good', 'Fair', 'Limited']
+      - name: observation_count
+        description: "Number of observations for the day"
+        tests:
+          - not_null
+
+  - name: city_comparisons
+    description: "Comparative weather analysis across all Vietnamese cities with national benchmarks"
     columns:
       - name: city
+        description: "City name"
         tests:
           - not_null
-      
-      - name: avg_temp_7d
-        description: 7-day rolling average temperature
-      
-      - name: avg_temp_30d
-        description: 30-day rolling average temperature
+          - unique
+      - name: hottest_rank
+        description: "Ranking from hottest (1) to coldest (8)"
+      - name: temp_vs_national_avg
+        description: "Temperature difference from Vietnam average (°C)"
+      - name: is_hottest_city
+        description: "Boolean flag indicating if this is the hottest city"
+      - name: vietnam_avg_temp
+        description: "Average temperature across all Vietnamese cities"
+
+  - name: hourly_trends
+    description: "Hourly aggregated weather data with rolling averages and hour-over-hour changes"
+    columns:
+      - name: hourly_id
+        description: "Surrogate key for unique city-hour combination"
+        tests:
+          - unique
+          - not_null
+      - name: city
+        description: "City name"
+        tests:
+          - not_null
+      - name: hour
+        description: "Hour timestamp (truncated to hour)"
+        tests:
+          - not_null
+      - name: hour_of_day
+        description: "Hour of day (0-23)"
+      - name: day_of_week
+        description: "Day of week (0=Sunday, 6=Saturday)"
+      - name: temp_change_1h
+        description: "Hour-over-hour temperature change (°C)"
+      - name: temp_24h_avg
+        description: "24-hour rolling average temperature"
+      - name: data_completeness
+        description: "Data quality indicator (Excellent/Good/Limited)"
+        tests:
+          - accepted_values:
+              values: ['Excellent', 'Good', 'Limited']
+

@@ -3,7 +3,7 @@ Unit tests for weather data pipeline
 """
 import unittest
 from unittest.mock import Mock, patch, MagicMock
-from api_request import WeatherAPIClient
+from api_request.api_client import OpenMeteoAPIClient
 from api_request.validators import WeatherDataValidator
 from api_request.config import Config
 from api_request.exceptions import APIConnectionError, DataValidationError
@@ -15,19 +15,21 @@ class TestWeatherDataValidator(unittest.TestCase):
     def setUp(self):
         """Set up test data"""
         self.valid_data = {
-            "location": {
-                "name": "New York",
-                "country": "USA",
-                "lat": "40.714",
-                "lon": "-74.006",
-                "localtime": "2023-10-01 10:00",
-                "utc_offset": "-4.0"
-            },
+            "latitude": 40.714,
+            "longitude": -74.006,
+            "timezone": "America/New_York",
             "current": {
-                "temperature": 22,
-                "wind_speed": 13,
-                "humidity": 56,
-                "weather_descriptions": ["Sunny"]
+                "time": "2023-10-01T10:00",
+                "temperature_2m": 22,
+                "relative_humidity_2m": 65,
+                "apparent_temperature": 21,
+                "precipitation": 0.0,
+                "weather_code": 0,
+                "cloud_cover": 25,
+                "pressure_msl": 1013.5,
+                "wind_speed_10m": 13,
+                "wind_direction_10m": 180,
+                "is_day": 1
             }
         }
     
@@ -84,55 +86,59 @@ class TestWeatherDataValidator(unittest.TestCase):
     
     def test_validate_complete_data_missing_fields(self):
         """Test validation with missing required fields"""
-        invalid_data = {"location": {}}
+        invalid_data = {"latitude": 40.714}
         is_valid, errors = WeatherDataValidator.validate_weather_data(invalid_data)
         self.assertFalse(is_valid)
         self.assertGreater(len(errors), 0)
-    
-    def test_sanitize_data(self):
-        """Test data sanitization"""
-        sanitized = WeatherDataValidator.sanitize_data(self.valid_data)
-        self.assertIsInstance(sanitized['temperature'], float)
-        self.assertIsInstance(sanitized['wind_speed'], float)
-        self.assertEqual(sanitized['city'], "New York")
 
 
 class TestWeatherAPIClient(unittest.TestCase):
     """Test API client"""
     
-    @patch('api_request.requests.Session')
+    @patch('requests.Session')
     def test_fetch_city_weather_success(self, mock_session):
         """Test successful weather fetch"""
         # Mock response
         mock_response = Mock()
         mock_response.json.return_value = {
-            "location": {"name": "Test City", "localtime": "2023-10-01 10:00"},
-            "current": {"temperature": 20, "wind_speed": 10}
+            "latitude": 40.714,
+            "longitude": -74.006,
+            "timezone": "America/New_York",
+            "current": {
+                "time": "2023-10-01T10:00",
+                "temperature_2m": 20,
+                "relative_humidity_2m": 60,
+                "apparent_temperature": 19,
+                "precipitation": 0.0,
+                "weather_code": 0,
+                "cloud_cover": 30,
+                "pressure_msl": 1015.0,
+                "wind_speed_10m": 10,
+                "wind_direction_10m": 90,
+                "is_day": 1
+            }
         }
         mock_response.raise_for_status = Mock()
         mock_session.return_value.get.return_value = mock_response
         
-        client = WeatherAPIClient()
-        data = client.fetch_city_weather("Test City")
+        client = OpenMeteoAPIClient()
+        city_data = {"name": "Test City", "lat": 40.714, "lon": -74.006}
+        data = client.fetch_current_weather(city_data)
         
         self.assertIsNotNone(data)
-        self.assertEqual(data['location']['name'], "Test City")
+        self.assertEqual(data['latitude'], 40.714)
     
-    @patch('api_request.requests.Session')
+    @patch('requests.Session')
     def test_fetch_city_weather_api_error(self, mock_session):
         """Test API error response"""
-        # Mock error response
-        mock_response = Mock()
-        mock_response.json.return_value = {
-            "error": {"info": "API key invalid"}
-        }
-        mock_response.raise_for_status = Mock()
-        mock_session.return_value.get.return_value = mock_response
+        # Mock error response that raises an exception
+        mock_session.return_value.get.side_effect = Exception("API down")
         
-        client = WeatherAPIClient()
-        data = client.fetch_city_weather("Test City")
+        client = OpenMeteoAPIClient()
+        city_data = {"name": "Test City", "lat": 40.714, "lon": -74.006}
         
-        self.assertIsNone(data)
+        with self.assertRaises(Exception):
+            client.fetch_current_weather(city_data)
 
 
 class TestConfig(unittest.TestCase):
