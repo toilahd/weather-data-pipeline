@@ -1,16 +1,22 @@
-{{ 
+{{
     config(
         materialized='incremental',
-        unique_key='id'
+        unique_key='id',
+        on_schema_change='fail'
     )
 }}
 
 WITH source AS (
     SELECT * 
     FROM {{ source('dev', 'raw_weather_data') }}
+    {% if is_incremental() %}
+    -- Only process new records in incremental runs
+    WHERE inserted_at > (SELECT MAX(inserted_at_local) FROM {{ this }})
+    {% endif %}
 ),
 
 de_dup AS (
+    -- Remove duplicates based on city and time, keeping the most recent insert
     SELECT 
         *,
         ROW_NUMBER() OVER (
@@ -18,15 +24,29 @@ de_dup AS (
             ORDER BY inserted_at DESC
         ) AS rn
     FROM source
+),
+
+cleaned AS (
+    SELECT 
+        id,
+        city,
+        latitude,
+        longitude,
+        temperature,
+        feels_like,
+        humidity,
+        pressure,
+        weather_description,
+        windspeed,
+        winddirection,
+        cloud_cover,
+        precipitation,
+        is_day,
+        time AS weather_time_local,
+        timezone,
+        inserted_at AS inserted_at_utc
+    FROM de_dup
+    WHERE rn = 1
 )
 
-SELECT 
-    id,
-    city,
-    temperature,
-    weather_description,
-    wind_speed,
-    time AS weather_time_local,
-    (inserted_at + (utc_offset || ' hours')::interval) AS inserted_at_local
-FROM de_dup
-WHERE rn = 1
+SELECT * FROM cleaned

@@ -2,19 +2,110 @@ version: 2
 
 sources:
   - name: dev
+    description: Development schema containing raw weather data
     database: db
     tables:
       - name: raw_weather_data
+        description: >
+          Raw weather data collected from Open-Meteo API.
+          Contains real-time weather information for multiple cities worldwide.
         columns:
           - name: id
+            description: Primary key, auto-incrementing identifier
             tests:
               - unique
               - not_null
+          
           - name: city
+            description: City name where weather was observed
+            tests:
+              - not_null
+          
+          - name: latitude
+            description: Geographical latitude coordinate
+            tests:
+              - not_null
+          
+          - name: longitude
+            description: Geographical longitude coordinate
+            tests:
+              - not_null
+          
           - name: temperature
+            description: Air temperature at 2 meters in Celsius
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: -100
+                  max_value: 60
+          
+          - name: feels_like
+            description: Apparent/perceived temperature in Celsius
+          
+          - name: humidity
+            description: Relative humidity percentage at 2 meters
+            tests:
+              - dbt_utils.accepted_range:
+                  min_value: 0
+                  max_value: 100
+          
+          - name: pressure
+            description: Atmospheric pressure at mean sea level in hPa
+          
           - name: weather_description
-          - name: wind_speed
+            description: Textual description of weather conditions (from WMO code)
+            tests:
+              - not_null
+          
+          - name: windspeed
+            description: Wind speed at 10 meters in km/h
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 0
+                  max_value: 200
+          
+          - name: winddirection
+            description: Wind direction in degrees (0-360)
+            tests:
+              - dbt_utils.accepted_range:
+                  min_value: 0
+                  max_value: 360
+          
+          - name: cloud_cover
+            description: Total cloud cover percentage
+            tests:
+              - dbt_utils.accepted_range:
+                  min_value: 0
+                  max_value: 100
+          
+          - name: precipitation
+            description: Precipitation in mm
+          
+          - name: is_day
+            description: 1 if daytime, 0 if nighttime
+          
+          - name: weathercode
+            description: WMO weather interpretation code
+          
           - name: time
+            description: Local time of weather observation
+            tests:
+              - not_null
+          
+          - name: timezone
+            description: Timezone identifier (e.g. America/New_York)
+          
           - name: inserted_at
-          - name: utc_offset
+            description: Timestamp when record was inserted into database
+            tests:
+              - not_null
+        
+        # Freshness check - alert if data is older than expected
+        freshness:
+          warn_after: {count: 2, period: hour}
+          error_after: {count: 6, period: hour}
+        
+        # Test that we're getting recent data
+        loaded_at_field: inserted_at
           

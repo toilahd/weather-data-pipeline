@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: stg_weather_data
+    description: >
+      Staged weather data with duplicates removed and timestamps normalized.
+      This is the cleaned version of raw_weather_data ready for analytics.
+    columns:
+      - name: id
+        description: Unique identifier from source
+        tests:
+          - unique
+          - not_null
+      
+      - name: city
+        description: City name
+        tests:
+          - not_null
+      
+      - name: temperature
+        description: Temperature in Celsius
+        tests:
+          - not_null
+      
+      - name: weather_description
+        description: Weather condition description
+        tests:
+          - not_null
+      
+      - name: weather_time_local
+        description: Local time of observation
+        tests:
+          - not_null
+      
+      - name: inserted_at_local
+        description: Record insertion time in local timezone
+        tests:
+          - not_null

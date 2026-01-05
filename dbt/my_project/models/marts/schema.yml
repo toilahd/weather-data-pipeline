@@ -1,0 +1,86 @@
+version: 2
+
+models:
+  - name: daily_average
+    description: >
+      Daily aggregated weather statistics by city.
+      Includes temperature trends, wind patterns, and observation counts.
+    columns:
+      - name: city
+        description: City name
+        tests:
+          - not_null
+      
+      - name: date
+        description: Date of observations
+        tests:
+          - not_null
+      
+      - name: avg_temperature
+        description: Average daily temperature in Celsius
+        tests:
+          - not_null
+      
+      - name: min_temperature
+        description: Minimum daily temperature
+      
+      - name: max_temperature
+        description: Maximum daily temperature
+      
+      - name: temp_change
+        description: Temperature change from previous day
+      
+      - name: observation_count
+        description: Number of observations for the day
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 1"
+
+  - name: weather_report
+    description: >
+      Latest weather conditions for each city with contextual categorizations.
+      This is the current weather snapshot used for dashboards.
+    columns:
+      - name: id
+        description: Surrogate key generated from city and observation time
+        tests:
+          - unique
+          - not_null
+      
+      - name: city
+        description: City name
+        tests:
+          - not_null
+      
+      - name: temperature
+        description: Current temperature in Celsius
+        tests:
+          - not_null
+      
+      - name: wind_category
+        description: Categorized wind strength
+        tests:
+          - accepted_values:
+              values: ['Calm', 'Moderate', 'Strong', 'Very Strong']
+      
+      - name: uv_risk
+        description: UV exposure risk level
+        tests:
+          - accepted_values:
+              values: ['Unknown', 'Low', 'Moderate', 'High', 'Very High', 'Extreme']
+
+  - name: weather_trends
+    description: >
+      7-day and 30-day weather trends and patterns by city.
+      Used for identifying climate patterns and anomalies.
+    columns:
+      - name: city
+        tests:
+          - not_null
+      
+      - name: avg_temp_7d
+        description: 7-day rolling average temperature
+      
+      - name: avg_temp_30d
+        description: 30-day rolling average temperature
